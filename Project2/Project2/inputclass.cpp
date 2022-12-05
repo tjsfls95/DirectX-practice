@@ -27,3 +27,23 @@ void InputClass::Initialize()
 
 	return;
 }
+
+void InputClass::KeyDown(unsigned int input)
+{
+	//키가 눌러진 상태라면 키 상태 배열에 저장
+	m_keys[input] = true;
+	return;
+}
+
+void InputClass::KeyUp(unsigned int input)
+{
+	//키가 떼진 상태라면 키 상태 배열 초기화
+	m_keys[input] = false;
+	return;
+}
+
+bool InputClass::IsKeyDown(unsigned int key)
+{
+	//키가 눌러졌는지 아닌지 상태를 반환
+	return m_keys[key];
+}
