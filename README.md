@@ -1,2 +1,2 @@
 # DirectX-practice
-CSharp DirectX practice
+C++ DirectX practice
