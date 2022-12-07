@@ -260,18 +260,79 @@ void SystemClass::InitializeWindows(int& screenWidth, int& screenHeight)
 		posY = (GetSystemMetrics(SM_CYSCREEN) - screenHeight) / 2;
 	}
 
+
+	//여기부터 12.6일부터 다시 조사좀
 	//화면 설정과 함께 윈도우 창 생성하고 제어한다
 	m_hwnd = CreateWindowEx(WS_EX_APPWINDOW, m_applicationName, m_applicationName,
 		WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_POPUP, posX, posY, screenWidth, screenHeight, 
 		NULL, NULL, m_hinstance, NULL);
+	//WS_EX_APPWINDOW -> 창이 표시되면 최상위 창을 작업 표시줄에 강제로 표시
+	//WS_CLIPSIBLINGS -> 자식창이 겹친다면 그리지 않는다
+	//WS_CLIPCHILDREN -> 부모 창에서 그리기 수행하면 자식창은 그리지 않는다
+	//WS_POPUP -> 창을 팝업창으로 설정
 
 	//윈도우 창을 화면에 띄우고 main focus에 둔다
 	ShowWindow(m_hwnd, SW_SHOW);
 	SetForegroundWindow(m_hwnd);
+	//SetFOregroundWindow -> 지정된 윈도우를 만든 스레드의 우선순위를
+	//최상위로 가져와 창을 활성화
 	SetFocus(m_hwnd);
 
 	//마우스 커서를 숨김
 	ShowCursor(false);
 
 	return;
+}
+
+void SystemClass::ShutdownWindows()
+{
+	//마우스 커서를 보이게 함
+	ShowCursor(true);
+
+	//풀 스크린 모드라면 디스플레이 설정 복구
+	if (FULL_SCREEN)
+	{
+		ChangeDisplaySettings(NULL, 0);
+	}
+
+	//창 제거
+	DestroyWindow(m_hwnd);
+	m_hwnd = NULL;
+
+	//프로그램 인스턴스 제거
+	UnregisterClass(m_applicationName, m_hinstance);
+	m_hinstance = NULL;
+
+	//이 클래스의 포인터를 해제
+	ApplicationHandle = NULL;
+
+	return;
+}
+
+LRESULT CALLBACK WndProc(HWND hwnd, UINT umessage, WPARAM wparam, LPARAM lparam)
+{
+	switch (umessage)
+	{
+		//창이 파괴되었는지 확인
+	case WM_DESTROY:
+	{
+		PostQuitMessage(0);
+		return 0;
+	}
+	//창이 닫겨 있는 상태인지 확인
+	case WM_CLOSE:
+	{
+		PostQuitMessage(0);
+		return 0;
+	}
+	//다른 모든 메세지는 시스템 클래스의 메세지 핸들러에 전달
+	default:
+	{
+		return ApplicationHandle->MessageHandler(hwnd, umessage, wparam, lparam);
+	}
+	}
+
+	//WM_CLOSE -> 윈도우 종료전에 실행
+	//WM_DESTROY -> 윈도우 종료될 때 실행
+	//WM_QUIT -> 프로그램을 종료하라는 신호
 }
