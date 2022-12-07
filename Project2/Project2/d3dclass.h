@@ -43,6 +43,7 @@ private:
 	int m_videoCardMemory;
 	char m_videoCardDescription[128];
 	IDXGISwapChain* m_swapChain;
+	//DXGI의 스왑체인 기능을 지원
 	ID3D11Device* m_device;
 	ID3D11DeviceContext* m_deviceContext;
 	ID3D11RenderTargetView* m_renderTargetView;
@@ -50,7 +51,9 @@ private:
 	ID3D11DepthStencilState* m_depthStencillState;
 	ID3D11DepthStencilView* m_depthStencillView;
 	ID3D11RasterizerState* m_rasterState;
-	XMFLOAT4X4 m_projectionMatrix;
+	DirectX::XMFLOAT4X4 m_projectionMatrix;
+	DirectX::XMFLOAT4X4 m_worldMatrix;
+	DirectX::XMFLOAT4X4 m_orthoMatrix;
 };
 
 

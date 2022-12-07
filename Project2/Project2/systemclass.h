@@ -33,6 +33,7 @@ private:
 	HINSTANCE m_hinstance;
 	HWND m_hwnd;
 
+	//클래스 변수
 	InputClass* m_Input;
 	GraphicsClass* m_Graphics;
 };
