@@ -45,15 +45,25 @@ private:
 	IDXGISwapChain* m_swapChain;
 	//DXGI의 스왑체인 기능을 지원
 	ID3D11Device* m_device;
+	//Device 기능 지원 점검과 자원 할당
 	ID3D11DeviceContext* m_deviceContext;
+	//렌더링 대상을 설정하고, 자원을 그래픽 파이프라인에 할당하고
+	//GPU가 렌더링 명령을 지시하는데에 쓰인다
 	ID3D11RenderTargetView* m_renderTargetView;
+	//버퍼를 렌더타겟으로 설정하기 위해서는
+	//버퍼의 작성된 렌더타겟뷰를 디바이스의 렌더타겟으로 설정
 	ID3D11Texture2D* m_depthStencillBuffer;
+	//2D 텍스쳐(2차원 그래픽) 인터페이스
 	ID3D11DepthStencilState* m_depthStencillState;
+	//Depth버퍼와 Stencil버퍼의 설정 세팅
 	ID3D11DepthStencilView* m_depthStencillView;
+	//Depth버퍼와 Stencil버퍼의
 	ID3D11RasterizerState* m_rasterState;
+	//Reasterize 버퍼 설정 세팅
 	DirectX::XMFLOAT4X4 m_projectionMatrix;
 	DirectX::XMFLOAT4X4 m_worldMatrix;
 	DirectX::XMFLOAT4X4 m_orthoMatrix;
+	//4x4짜리 매트릭스
 };
 
 
