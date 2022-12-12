@@ -44,7 +44,7 @@ bool D3DClass::Initialize(int screenWidth, int screenHeight, bool vsync,
 	//Direct3D 특성레벨 속성값(하드웨어 지원 레벨)
 	ID3D11Texture2D* backBufferPtr;
 	D3D11_TEXTURE2D_DESC depthBufferDesc;
-	//2D텍스처 구조체
+	//2D텍스처 구조체(깊이버퍼)
 	D3D11_DEPTH_STENCIL_DESC depthStencilDesc;
 	//스텐실 구조체
 	D3D11_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc;
@@ -230,4 +230,129 @@ bool D3DClass::Initialize(int screenWidth, int screenHeight, bool vsync,
 	//더 이상 필요가 없는 백버퍼 포인터를 해제
 	backBufferPtr->Release();
 	backBufferPtr = 0;
+
+	//깊이 버퍼 구조체를 초기화
+	ZeroMemory(&depthBufferDesc, sizeof(depthBufferDesc));
+
+	//깊이 버퍼 구조체 세팅
+	depthBufferDesc.Width = screenWidth;
+	depthBufferDesc.Height = screenHeight;
+	depthBufferDesc.MipLevels = 1;
+	depthBufferDesc.ArraySize = 1;
+	depthBufferDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	//깊이버퍼 24bit 스텐실 8bit 구조
+	depthBufferDesc.SampleDesc.Count = 1;
+	//픽셀당 멀티 샘플 수
+	depthBufferDesc.SampleDesc.Quality = 0;
+	//품질 레벨
+	//멀티샘플 해제
+	depthBufferDesc.Usage = D3D11_USAGE_DEFAULT;
+	//텍스쳐(깊이버퍼)의 저장/불러오기 방식 설정
+	//D3D11_USAGE_DEFAULT -> GPU로 저장/불러오기
+	//D3D11_USAGE_IMMUTABLE -> GPU로 불러오기만
+	//D3D11_USAGE_DYNAMIC -> GPU로 불러오기,CPU로 저장
+	//D3D11_USAGE_STAGING -> GPU에서 CPU로 복사(이동)만 가능
+	depthBufferDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+	//2D텍스쳐인 depthBufferDesc를 출력단계에서 depth-stencil 타겟으로 바인드
+	depthBufferDesc.CPUAccessFlags = 0;
+	//CPU 액세스를 허용하지 않음
+	depthBufferDesc.MiscFlags = 0;
+	//기타 플래그 사용안함
+
+	//깊이 버퍼 구조체를 이용하여 깊이버퍼텍스처 생성
+	result = m_device->CreateTexture2D(&depthBufferDesc, NULL, &m_depthStencillBuffer);
+	if (FAILED(result))
+	{
+		return false;
+	}
+
+	//깊이 스텐실 상태 구조체 초기화
+	ZeroMemory(&depthStencilDesc, sizeof(depthStencilDesc));
+
+	//깊이 스텐실 상태 구조체 세팅
+	depthStencilDesc.DepthEnable = true;
+	//깊이 테스트 활성화
+	depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+	//쓰기 활성화
+	depthStencilDesc.DepthFunc = D3D11_COMPARISON_LESS;
+	//깊이 데이터 비교함수
+	//D3D11_COMPARISON_LESS는 비교데이터보다 현재데이터가
+	//더 z값이 적을 때, 즉 현재 데이터가 더 앞에 있을때만 갱신
+	//다시말해 현재 정점이 더 앞이면 렌더링한다
+	
+	depthStencilDesc.StencilEnable = true;
+	//깊이 스텐실 테스트 활성화
+	depthStencilDesc.StencilReadMask = D3D11_DEFAULT_STENCIL_READ_MASK;
+	depthStencilDesc.StencilWriteMask = D3D11_DEFAULT_STENCIL_WRITE_MASK;
+	
+	//픽셀이 정면방향일 때의 스텐실 설정
+	depthStencilDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+	//깊이-스텐실 테스트 실패했을 때,스텐실 데이터 보존(D3D11_STENCIL_OP_KEEP)
+	depthStencilDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
+	//스텐실 테스트는 통과하고 깊이 테스트가 실패할때,스텐실 값을 1 올리고
+	//필요하다면 결과를 wrap함(D3D11_STENCIL_OP_INCR)
+	depthStencilDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+	//깊이-스텐실 테스트를 통과 했을 때,스텐실 데이터 보존
+	depthStencilDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+	//스텐실 데이터 비교함수
+	//항상 비교함
+
+	//깊이 스텐실 상태 생성
+	result = m_device->CreateDepthStencilState(&depthStencilDesc, &m_depthStencillState);
+	{
+		return false;
+	}
+
+	//깊이 스텐실 상태 세팅
+	m_deviceContext->OMSetDepthStencilState(m_depthStencillState, 1);
+	//OMSetDepthStencilState->스텐실 상태를 출력단계에서 세팅
+
+	//깊이 스텐실 뷰 초기화
+	ZeroMemory(&depthStencilViewDesc, sizeof(depthStencilViewDesc));
+
+	//깊이 스텐실 뷰 구조체 세팅
+	depthStencilViewDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	//깊이버퍼 24bit 스텐실 8bit 구조
+	depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+	//깊이-스텐실 뷰가 2D 텍스처에 액세스
+	depthStencilViewDesc.Texture2D.MipSlice = 0;
+	//사용되는 첫번쨰 mipmap 인덱스
+
+	//깊이 스텐실 뷰 생성
+	result = m_device->CreateDepthStencilView(m_depthStencillBuffer, &depthStencilViewDesc, &m_depthStencillView);
+	if (FAILED(result))
+	{
+		return false;
+	}
+
+	//렌더링 타겟 뷰와 깊이 스텐실 버퍼를 출력 렌더링 파이프라인에 바인딩
+	m_deviceContext->OMSetRenderTargets(1, &m_renderTargetView, m_depthStencillView);
+
+	//어떻게 그리고 어떤 폴리곤을 그릴지 결정하는 래스터 구조체를 세팅
+	rasterDesc.AntialiasedLineEnable = false;
+	//안티에일리어싱 하지 않음
+	rasterDesc.CullMode = D3D11_CULL_BACK;
+	//후면에 존재하는것은 그리지 않음
+	//컬링:렌더링 할 필요가 없는 것을 선별해 제외(그리지 않음)
+	rasterDesc.DepthBias = 0;
+	//픽셀에 부여하는 깊이값
+	rasterDesc.DepthBiasClamp = 0.0f;
+	//
+	rasterDesc.DepthClipEnable = true;
+	//z축 깊이 클리핑 가능여부(클리핑->뷰포트(보이는 영역,윈도우)에만
+	//렌더링 처리
+	rasterDesc.FillMode = D3D11_FILL_SOLID;
+	//D3D11_FILL_WIREFRAME -> 선만 이음
+	//D3D11_FILL_SOLID -> 속도 채움,표준
+	rasterDesc.FrontCounterClockwise = false;
+	//반시계 방향을 앞면으로 설정 -> 이유작성
+	rasterDesc.MultisampleEnable = false;
+	//멀티샘플링 하지 않음
+	//true면 사변형 라인 안티 에일리어싱
+	//false면 알파 라인 안티 에일리어싱 -> 더 자세하게
+	rasterDesc.ScissorEnable = false;
+
+
+
+
 }
